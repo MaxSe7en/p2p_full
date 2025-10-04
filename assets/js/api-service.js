@@ -157,5 +157,19 @@ const ApiService = {
       console.error('API: Error fetching messages:', error);
       throw error;
     }
+  },
+  
+   // Wallet Balances
+  async getUserWalletBalances(userId) {
+    console.log('API: Fetching wallet balances for user:', userId);
+    try {
+      const response = await fetch(`${API_BASE}/users/${userId}/wallets`);
+      const result = await response.json();
+      console.log('API: Wallet balances fetched:', result.data?.length || 0);
+      return result;
+    } catch (error) {
+      console.error('API: Error fetching wallet balances:', error);
+      throw error;
+    }
   }
 };

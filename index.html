@@ -45,6 +45,8 @@
       </button>
     </div>
 
+       <!-- Wallet Balances Card -->
+    <div id="wallet-balances"></div>
     <!-- Trades List -->
     <div id="trade-list"></div>
   </div>
@@ -126,7 +128,122 @@
       `).join('');
     }
 
-    // Load trades on page load
+    // Wallet Balance Functions
+    async function loadWalletBalances() {
+      console.log('Loading wallet balances...');
+      const container = document.getElementById('wallet-balances');
+      
+      try {
+        const userId = AuthService.getUserId();
+        const result = await ApiService.getUserWalletBalances(userId);
+
+        if (!result.success) {
+          console.log('Could not load wallet balances');
+          return;
+        }
+
+        const wallets = result.data;
+        
+        if (!wallets || wallets.length === 0) {
+          container.innerHTML = `
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <h2 class="text-xl font-bold text-gray-800 mb-4">My Wallets</h2>
+              <p class="text-gray-600">No wallet balances available</p>
+            </div>
+          `;
+          return;
+        }
+
+        displayWalletBalances(wallets);
+      } catch (error) {
+        console.error('Error loading wallet balances:', error);
+        container.innerHTML = '';
+      }
+    }
+
+    function displayWalletBalances(wallets) {
+      const container = document.getElementById('wallet-balances');
+      
+      container.innerHTML = `
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">My Wallets</h2>
+            <button onclick="loadWalletBalances()" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+              <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${wallets.map(wallet => {
+              const locked = parseFloat(wallet.locked || 0);
+              const available = parseFloat(wallet.balance || 0) - locked;
+              
+              return `
+                <div class="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center">
+                      <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                        <span class="text-indigo-600 font-bold text-sm">${wallet.asset}</span>
+                      </div>
+                      <div>
+                        <h3 class="font-bold text-gray-800">${wallet.asset}</h3>
+                        <p class="text-xs text-gray-500">${getCryptoName(wallet.asset)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm text-gray-600">Total Balance</span>
+                      <span class="font-bold text-gray-800">${parseFloat(wallet.balance || 0).toFixed(8)}</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm text-gray-600">Available</span>
+                      <span class="font-semibold text-green-600">${available.toFixed(8)}</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm text-gray-600">In Escrow</span>
+                      <span class="font-semibold text-yellow-600">${locked.toFixed(8)}</span>
+                    </div>
+                  </div>
+                  
+                  ${locked > 0 ? `
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                      <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-yellow-500 h-2 rounded-full" style="width: ${(locked / wallet.balance * 100).toFixed(1)}%"></div>
+                      </div>
+                      <p class="text-xs text-gray-500 mt-1">${(locked / wallet.balance * 100).toFixed(1)}% locked</p>
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function getCryptoName(symbol) {
+      const names = {
+        'BTC': 'Bitcoin',
+        'ETH': 'Ethereum',
+        'USDT': 'Tether',
+        'BNB': 'Binance Coin',
+        'SOL': 'Solana',
+        'ADA': 'Cardano',
+        'XRP': 'Ripple',
+        'DOT': 'Polkadot',
+        'DOGE': 'Dogecoin',
+        'LTC': 'Litecoin'
+      };
+      return names[symbol] || symbol;
+    }
+
+    loadWalletBalances();
     loadTrades();
   </script>
 </body>
