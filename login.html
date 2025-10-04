@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - P2P Escrow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
+  <div class="max-w-md w-full">
+    <!-- Card -->
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-indigo-600 to-blue-600 px-8 py-6">
+        <h1 class="text-3xl font-bold text-white text-center">Welcome Back</h1>
+        <p class="text-indigo-100 text-center mt-2">Sign in to your account</p>
+      </div>
+
+      <!-- Form -->
+      <div class="px-8 py-6">
+        <div id="message"></div>
+
+        <form id="login-form" class="space-y-6">
+          <div>
+            <label for="username" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              required
+              placeholder="Enter your username"
+              autocomplete="username"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+            />
+          </div>
+
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+            />
+          </div>
+
+          <button
+            type="submit"
+            id="submit-btn"
+            class="w-full bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition shadow-md"
+          >
+            Login
+          </button>
+        </form>
+
+        <div class="mt-6 text-center text-sm text-gray-600">
+          Don't have an account?
+          <a href="register.html" class="text-indigo-600 font-semibold hover:text-indigo-700">Register here</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="assets/js/auth-service.js"></script>
+  <script src="assets/js/api-service.js"></script>
+  <script src="assets/js/ui-utils.js"></script>
+  <script>
+    // Redirect if already logged in
+    AuthService.redirectIfAuthenticated();
+
+    const form = document.getElementById('login-form');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      console.log('Login form submitted');
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        UIUtils.showMessage('message', 'Please enter both username and password', 'error');
+        return;
+      }
+
+      UIUtils.setButtonLoading('submit-btn', true, 'Logging in...');
+      document.getElementById('message').innerHTML = '';
+
+      try {
+        const result = await ApiService.login(username, password);
+
+        if (!result.success) {
+          throw new Error(result.message || 'Login failed');
+        }
+
+        UIUtils.showMessage('message', 'Login successful! Redirecting...', 'success');
+
+        const userData = result.data;
+        AuthService.saveUser(userData.id, userData.username, userData.wallets);
+
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1000);
+      } catch (error) {
+        console.error('Login error:', error);
+        UIUtils.showMessage('message', error.message, 'error');
+      } finally {
+        UIUtils.setButtonLoading('submit-btn', false);
+      }
+    });
+  </script>
+</body>
+</html>

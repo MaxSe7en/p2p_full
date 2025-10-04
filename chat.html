@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trade Chat - P2P Escrow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+  <!-- Header -->
+  <nav class="bg-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <h1 class="text-2xl font-bold text-indigo-600">Trade Chat</h1>
+        <div id="user-info" class="text-sm text-gray-600"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Back Link -->
+    <div class="mb-6">
+      <a href="#" onclick="goBackToTrade(); return false;" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-medium">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Trade Details
+      </a>
+    </div>
+
+    <!-- Connection Status -->
+    <div id="connection-status" class="connection-status connecting mb-6"></div>
+
+    <!-- Chat Box -->
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
+      <div id="chat-box" class="h-96 overflow-y-auto p-6 space-y-3"></div>
+    </div>
+
+    <!-- Chat Form -->
+    <form id="chat-form" class="bg-white rounded-lg shadow-lg p-4 flex gap-3">
+      <input
+        type="text"
+        id="message"
+        placeholder="Type a message..."
+        autocomplete="off"
+        disabled
+        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition disabled:bg-gray-100 disabled:cursor-not-allowed"
+      />
+      <button
+        type="submit"
+        disabled
+        class="px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
+      >
+        Send
+      </button>
+    </form>
+  </div>
+
+  <!-- Scripts -->
+  <script src="assets/js/auth-service.js"></script>
+  <script src="assets/js/api-service.js"></script>
+  <script src="assets/js/ui-utils.js"></script>
+  <script src="assets/js/websocket-service.js"></script>
+  <script>
+    AuthService.requireAuth();
+    AuthService.displayUserInfo();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const tradeId = urlParams.get('trade');
+    const userId = AuthService.getUserId();
+    const username = AuthService.getUsername();
+
+    const chatBox = document.getElementById('chat-box');
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('message');
+    const statusDiv = document.getElementById('connection-status');
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    if (!tradeId) {
+      document.body.innerHTML = '<div class="max-w-4xl mx-auto px-4 py-8"><h1 class="text-2xl font-bold text-red-600">Error: No trade ID provided</h1><a href="index.html" class="text-indigo-600">Go back</a></div>';
+    }
+
+    // Update connection status UI
+    function updateStatus(status, message) {
+      console.log('Chat: Status update -', status, message);
+      statusDiv.className = `connection-status ${status} mb-6`;
+      statusDiv.textContent = message;
+    }
+
+    // Handle WebSocket messages
+    function handleWSMessage(event) {
+      console.log('Chat: Message event received:', event.type);
+
+      if (event.type === 'joined') {
+        form.style.display = 'flex';
+        input.disabled = false;
+        submitBtn.disabled = false;
+        input.focus();
+        addSystemMessage(`You joined the chat for Trade #${tradeId}`);
+        loadPreviousMessages();
+        return;
+      }
+
+      if (event.type === 'left') {
+        addSystemMessage('You left the chat');
+        form.style.display = 'none';
+        return;
+      }
+
+      if (event.type === 'message') {
+        const data = event.data;
+        const isMe = data.sender_id == userId;
+        addMessage(data.sender_name, data.message, data.created_at, isMe);
+        return;
+      }
+
+      if (event.type === 'error') {
+        addSystemMessage(`Error: ${event.data.error}`);
+      }
+    }
+
+    // Add message to chat
+    function addMessage(sender, message, timestamp, isMe) {
+      console.log('Chat: Adding message from', sender);
+      const div = document.createElement('div');
+      div.className = `msg ${isMe ? 'me' : 'other'}`;
+      div.innerHTML = `
+        <div class="msg-sender">${sender}</div>
+        <div class="msg-text">${UIUtils.escapeHtml(message)}</div>
+        <div class="msg-time">${timestamp}</div>
+      `;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Add system message
+    function addSystemMessage(message) {
+      console.log('Chat: System message -', message);
+      const div = document.createElement('div');
+      div.className = 'system-message';
+      div.textContent = message;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Send message
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      console.log('Chat: Sending message:', msg);
+      const sent = WebSocketService.sendMessage(msg);
+      
+      if (!sent) {
+        addSystemMessage('Not connected to chat server');
+        return;
+      }
+
+      input.value = '';
+    });
+
+    // Go back to trade page
+    function goBackToTrade() {
+      console.log('Chat: Navigating back to trade page');
+      WebSocketService.disconnect();
+      window.location.href = `trade.html?trade=${tradeId}`;
+    }
+
+    // Load previous messages
+    async function loadPreviousMessages() {
+      console.log('Chat: Loading previous messages');
+      try {
+        const result = await ApiService.getTradeMessages(tradeId);
+
+        if (!result.success) {
+          console.log('Chat: Could not load previous messages');
+          return;
+        }
+
+        const messages = result.data;
+
+        if (messages.length === 0) {
+          addSystemMessage('No previous messages');
+        } else {
+          chatBox.innerHTML = '';
+          messages.forEach((msg) => {
+            const isMe = msg.sender_id == userId;
+            addMessage(msg.sender_name, msg.message, msg.created_at, isMe);
+          });
+        }
+      } catch (error) {
+        console.error('Chat: Error loading previous messages:', error);
+      }
+    }
+
+    // Connect to WebSocket
+    console.log('Chat: Initializing WebSocket connection');
+    WebSocketService.connect(tradeId, userId, handleWSMessage, updateStatus);
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      console.log('Chat: Page unloading, disconnecting WebSocket');
+      WebSocketService.disconnect();
+    });
+  </script>
+</body>
+</html>

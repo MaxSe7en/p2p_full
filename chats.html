@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Chats - P2P Escrow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+  <!-- Header -->
+  <nav class="bg-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <h1 class="text-2xl font-bold text-indigo-600">My Chats</h1>
+        <div id="user-info" class="text-sm text-gray-600"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Action Buttons -->
+    <div class="mb-6 flex flex-wrap gap-3">
+      <a href="index.html" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-medium">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Trades
+      </a>
+      <button onclick="loadChats()" class="text-gray-600 hover:text-gray-800 font-medium">Refresh</button>
+    </div>
+
+    <!-- Chats List -->
+    <div id="chat-list"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="assets/js/auth-service.js"></script>
+  <script src="assets/js/api-service.js"></script>
+  <script src="assets/js/ui-utils.js"></script>
+  <script src="assets/js/notification-system.js"></script>
+  <script>
+    AuthService.requireAuth();
+    AuthService.displayUserInfo();
+
+    const userId = AuthService.getUserId();
+
+    async function loadChats() {
+      console.log('Loading user chats...');
+      UIUtils.showLoading('chat-list', 'Loading your chats...');
+
+      try {
+        const result = await ApiService.getUserChats(userId);
+
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to load chats');
+        }
+
+        const chats = result.data;
+
+        if (chats.length === 0) {
+          UIUtils.showEmptyState(
+            'chat-list',
+            '💬',
+            'No chats yet',
+            'Start trading to begin conversations with other users',
+            '<a href="index.html" class="inline-block mt-4 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition">Browse Trades</a>'
+          );
+          return;
+        }
+
+        displayChats(chats);
+      } catch (error) {
+        console.error('Error loading chats:', error);
+        UIUtils.showError('chat-list', error);
+      }
+    }
+
+    function displayChats(chats) {
+      const container = document.getElementById('chat-list');
+      container.innerHTML = chats.map(chat => {
+        const timeAgo = UIUtils.formatTimeAgo(chat.last_message_at);
+        
+        return `
+          <div class="bg-white rounded-lg shadow-md p-6 mb-4 hover:shadow-lg transition cursor-pointer" onclick="openChat(${chat.id})">
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <h3 class="text-xl font-bold text-gray-800">Trade #${chat.id}</h3>
+                <p class="text-sm text-gray-500 mt-1">${chat.asset}: ${chat.amount}</p>
+              </div>
+              ${UIUtils.getStatusBadge(chat.status)}
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <p class="text-sm text-gray-500">Trading with</p>
+                <p class="font-semibold text-gray-800">${chat.counterparty_name || 'Unknown'}</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-500">Last activity</p>
+                <p class="font-semibold text-gray-800">${timeAgo}</p>
+              </div>
+            </div>
+            <div class="pt-4 border-t border-gray-200">
+              <span class="inline-flex items-center text-sm text-indigo-600 font-medium">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                ${chat.message_count} message${chat.message_count !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openChat(tradeId) {
+      window.location.href = `chat.html?trade=${tradeId}`;
+    }
+
+    loadChats();
+  </script>
+</body>
+</html>
