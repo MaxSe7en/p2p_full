@@ -1,5 +1,5 @@
 // WebSocket Service Module - Handles real-time chat communication
-const WS_URL = 'ws://localhost:8080';
+const WS_URL = 'wss://alphaseven.online/ws';
 
 const WebSocketService = {
   ws: null,

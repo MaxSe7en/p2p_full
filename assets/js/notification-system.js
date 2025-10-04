@@ -52,7 +52,7 @@ class NotificationSystem {
 
   async fetchUserTrades() {
     try {
-      const response = await fetch(`http://localhost:8000/trades/user/${this.userId}/chats`);
+      const response = await fetch(`https://alphaseven.online/p2p_test/trades/user/${this.userId}/chats`);
       if (response.ok) {
         const trades = await response.json();
         console.log('Fetching user trades for notifications...', trades);
@@ -72,7 +72,7 @@ class NotificationSystem {
     this.isConnecting = true;
     console.log('Connecting to notification WebSocket...');
 
-    this.ws = new WebSocket('ws://localhost:8080');
+    this.ws = new WebSocket('wss://alphaseven.online/ws');
 
     this.ws.onopen = () => {
       console.log('✓ Notification WebSocket connected');
