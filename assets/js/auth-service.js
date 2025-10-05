@@ -1,4 +1,3 @@
-// Authentication Service Module - Handles user authentication state
 const AuthService = {
   // Get current user ID
   getUserId() {

@@ -1,6 +1,5 @@
-// UI Utilities Module - Common UI functions
+
 const UIUtils = {
-  // Show message in a container
   showMessage(containerId, message, type = 'info') {
     console.log(`UI: Showing ${type} message:`, message);
     const container = document.getElementById(containerId);

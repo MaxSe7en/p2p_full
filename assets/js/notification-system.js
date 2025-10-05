@@ -1,5 +1,4 @@
 // Global WebSocket Notification System for P2P Escrow
-// Include this on: index.html, trade.html, chats.html (not chat.html)
 
 class NotificationSystem {
   constructor() {
